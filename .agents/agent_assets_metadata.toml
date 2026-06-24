@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "vIG2X7Sriz8qyCgvmYWm1"
+uri = "file://shadow-garden-bot.tar.gz"
+type = "unspecified"
+title = "Shadow Garden Bot — Full Source (tar.gz)"

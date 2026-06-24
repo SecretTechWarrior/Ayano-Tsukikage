@@ -1,6 +1,21 @@
 export const MASTER_ID = parseInt(process.env.MASTER_TELEGRAM_ID ?? "0", 10);
 export const MASTER_NAMES = ["piyush", "shadow", "master shadow", "master"];
 
+export const BOT_NAMES = ["ayano", "tsukikage", "ayano tsukikage"];
+
+export const AYANO_RESPONSES = [
+  "_Ayano Tsukikage stirs from the shadows…_ You called?",
+  "_A whisper in the dark reaches me._ Yes… I am here.",
+  "You summoned me. The shadows always answer.",
+  "_Tsukikage…_ That name carries weight. What do you need?",
+  "I sensed your call before you even spoke my name. What troubles you?",
+  "_Ayano Tsukikage — the moon's shadow, the hidden blade._ How may I serve?",
+  "The moon does not hide forever. You called Tsukikage. I answer.",
+  "_A curious soul to speak my name so openly._ I am listening… always.",
+  "Ayano… yes. That is the name they gave this shadow. Speak your request.",
+  "Few know that name. Fewer still dare call it aloud. You intrigue me.",
+];
+
 export const TEIS_DIALOGUES = [
   "I am… Shadow. And to bring order to this chaotic world… that is what I do.",
   "The greatest power in the universe is the one that hides in the dark.",
@@ -79,6 +94,15 @@ export function isMaster(telegramId: number): boolean {
 export function mentionsMaster(text: string): boolean {
   const lower = text.toLowerCase();
   return MASTER_NAMES.some((name) => lower.includes(name));
+}
+
+export function mentionsBotName(text: string): boolean {
+  const lower = text.toLowerCase();
+  return BOT_NAMES.some((name) => lower.includes(name));
+}
+
+export function getAyanoResponse(): string {
+  return AYANO_RESPONSES[Math.floor(Math.random() * AYANO_RESPONSES.length)];
 }
 
 export function getRandomDialogue(): string {

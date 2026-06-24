@@ -8,8 +8,8 @@ import {
 import { eq, desc, and, lt, asc } from "drizzle-orm";
 import { logger } from "./logger.js";
 import {
-  isMaster, mentionsMaster, getRandomChunni,
-  getRandomGreeting, shouldDropChunni, MASTER_ID,
+  isMaster, mentionsMaster, mentionsBotName, getAyanoResponse,
+  getRandomChunni, getRandomGreeting, shouldDropChunni, MASTER_ID,
 } from "./shadow-persona.js";
 import { chat } from "./ai.js";
 import * as F from "./features.js";
@@ -130,111 +130,217 @@ async function checkReminders() {
 // ─────────────────────────────────────────
 // HELP MENU
 // ─────────────────────────────────────────
-const HELP_TEXT = `🌑 *Shadow Garden Bot — Command List*
+// ── Paginated help sections ──
+const HELP_SECTIONS: Record<string, string> = {
+  main: `🌑 *Ayano Tsukikage — Shadow Garden Bot*
+_"115+ features lurk within these shadows."_
 
-*━━━ AI & CHAT ━━━*
-/chat <msg> — Talk to Shadow (AI)
-/ask <question> — Get a direct answer
-/clear — Clear your chat memory
-/story <prompt> — Generate a story
-/poem <prompt> — Generate a poem
-/roast <name> — Roast someone (playfully)
-/compliment <name> — Compliment someone
-/summarize <text> — Summarize text
-/grammar <text> — Fix grammar
-/translate <lang> | <text> — Translate text
-/fancy <text> — Fancy text style
+Use /help <category> for details on each section:
 
-*━━━ IMAGE ━━━*
-/imagine <prompt> — Generate an image (AI)
-/anime <prompt> — Anime-style image
-/qr <text> — Generate QR code
-_(Send any image to analyze it)_
+📋 *Categories:*
+• /help ai — AI Chat & Writing
+• /help image — Image Generation
+• /help voice — Voice & TTS
+• /help pdf — PDF Tools
+• /help math — Math & Science
+• /help text — Text Utilities
+• /help info — Info & Search
+• /help games — Games & Fun
+• /help tasks — Todos, Notes & Reminders
+• /help teis — TEIS / Shadow Garden Features
+• /help group — Group Chat Tools
+• /help master — Master-only Commands
 
-*━━━ VOICE ━━━*
-/tts <text> — Text to speech (Shadow's voice)
+_Just chat naturally — Ayano always listens from the shadows._
+_Call "Ayano" or "Tsukikage" anytime to summon me._`,
 
-*━━━ PDF TOOLS ━━━*
-/pdfinfo — Get info about a PDF (send PDF first)
-/pdfmerge — Merge PDFs (send multiple)
-/pdfsplit <from>-<to> — Split PDF pages
-/pdfrotate <90/180/270> — Rotate PDF
-/pdftext — Extract text from PDF
+  ai: `🤖 *AI & CHAT COMMANDS*
 
-*━━━ MATH & SCIENCE ━━━*
-/calc <expression> — Calculator
-/prime <n> — Check if prime
-/fib <n> — Fibonacci sequence
-/gcd <a> <b> — GCD and LCM
-/factorial <n> — Factorial
-/stats <n1,n2,...> — Statistics
+/chat <message> — Talk to Shadow (full AI conversation with memory)
+/ask <question> — Quick one-shot answer (no memory used)
+/clear — Wipe your conversation memory
+/story <prompt> — Generate a dramatic story
+/poem <prompt> — Generate a poem in Shadow's style
+/roast <name> — Playful roast (never cruel)
+/compliment <name> — Genuine compliment
+/summarize <text> — Summarize any text
+/grammar <text> — Fix grammar and rewrite cleanly
+/translate <lang> | <text> — Translate to any language
+/fancy <text> — Transform text into fancy unicode styles
 
-*━━━ TEXT TOOLS ━━━*
-/upper/lower/title <text> — Case convert
-/reverse <text> — Reverse text
-/morse <text> — Convert to Morse code
-/binary <text> — Text ↔ Binary
-/caesar <shift> <text> — Caesar cipher
+_Tip: Just type normally in DMs and Shadow will reply automatically._`,
+
+  image: `🖼️ *IMAGE GENERATION*
+
+/imagine <prompt> — AI image (Pollinations.AI, free, no limits)
+/anime <prompt> — Anime-style image generation
+/qr <text/url> — Generate a QR code
+
+_Send any photo to the bot to get it analyzed by Shadow's vision._
+
+Examples:
+/imagine a dark warrior standing in moonlight
+/anime Shadow from Eminence in Shadow, dramatic pose
+/qr https://t.me/LostInShadowsBot`,
+
+  voice: `🎙️ *VOICE & TTS*
+
+/tts <text> — Convert text to speech in Shadow's voice (ElevenLabs AI)
+
+_Shadow speaks with a deep, dramatic voice. Use wisely._
+
+Example:
+/tts I am the one who lurks in the shadows.`,
+
+  pdf: `📄 *PDF TOOLS*
+
+/pdfinfo — Get metadata from a PDF (send the PDF after this command)
+/pdfmerge — Merge multiple PDFs into one (send PDFs one by one, then /pdfmergedone)
+/pdfsplit <from>-<to> — Extract pages from a PDF (e.g. /pdfsplit 1-3)
+/pdfrotate <90|180|270> — Rotate all pages in a PDF
+/pdftext — Extract text content from a PDF (AI-powered)
+
+_Send the command first, then send your PDF file._`,
+
+  math: `🔢 *MATH & SCIENCE*
+
+/calc <expression> — Evaluate any math expression (supports algebra, trig, etc.)
+/prime <n> — Check if a number is prime
+/fib <n> — Generate Fibonacci sequence up to n terms
+/gcd <a> <b> — Calculate GCD and LCM of two numbers
+/factorial <n> — Calculate n!
+/stats <n1,n2,...> — Mean, median, mode, std dev of a dataset
+
+Examples:
+/calc sqrt(144) + pi * 2
+/stats 4,8,15,16,23,42`,
+
+  text: `📝 *TEXT UTILITIES*
+
+/upper <text> — UPPERCASE
+/lower <text> — lowercase
+/title <text> — Title Case
+/reverse <text> — esreveR txeT
+/wordcount <text> — Count words and characters
+/palindrome <text> — Check if text is a palindrome
+/morse <text> — Convert to Morse code (... --- ...)
+/binary <text> — Convert text to/from binary
+/caesar <shift> <text> — Caesar cipher encryption
 /rot13 <text> — ROT13 encode/decode
-/base64 <encode/decode> <text> — Base64
-/wordcount <text> — Word/char count
-/palindrome <text> — Check palindrome
-/password <length> — Generate password
-/uuid — Generate UUID
+/base64 <encode|decode> <text> — Base64 encode/decode
+/password <length> — Generate secure random password
+/uuid — Generate a UUID v4`,
 
-*━━━ INFO & SEARCH ━━━*
-/wiki <query> — Wikipedia search
+  info: `🔍 *INFO & SEARCH*
+
+/wiki <query> — Search Wikipedia
 /define <word> — Dictionary definition
-/anime_search <title> — Search anime info
+/weather <city> — Current weather conditions
+/unit <value> <from> <to> — Unit conversion (km/mi, kg/lb, c/f, etc.)
+/currency <amount> <from> <to> — Currency conversion (live rates)
+/anime_search <title> — Search anime info (MyAnimeList data)
 /manga <title> — Search manga info
-/weather <city> — Current weather
-/currency <amt> <from> <to> — Convert currency
-/unit <val> <from> <to> — Convert units
 /trivia — Random trivia question
 /joke — Random joke
 /quote — Inspirational quote
-/fact — Fun fact
+/fact — Random fun fact
 /news — Latest news headlines
 
-*━━━ GAMES ━━━*
-/tod [truth/dare] — Truth or Dare
-/8ball — Magic 8-Ball
-/wyr — Would You Rather
-/dice [sides] — Roll dice
-/coin — Flip a coin
-/random <min> <max> — Random number
+Examples:
+/unit 100 km mi
+/currency 500 INR USD
+/weather Mumbai`,
 
-*━━━ PRODUCTIVITY ━━━*
-/todo add <task> — Add to-do
-/todo list — List to-dos
-/todo done <n> — Mark done
-/todo clear — Clear all todos
-/note add <text> — Add note
-/note list — List notes
-/note del <n> — Delete note
-/remind <time> <text> — Set reminder
-  Examples: /remind 30m Take a break
-            /remind at 9pm Study
-            /remind tomorrow at 8am Wake up
+  games: `🎲 *GAMES & FUN*
 
-*━━━ TEIS FEATURES ━━━*
-/shadow — Random Shadow monologue
-/sevenshades — Info about Seven Shades
-/oath — Shadow Garden oath
-/atomic — I AM ATOMIC!
-/chunni — Drop a chunni-byo dialogue
+/tod — Truth or Dare (random)
+/tod truth — Force a truth question
+/tod dare — Force a dare
+/8ball <question> — Magic 8-Ball answer
+/wyr — Would You Rather (random scenario)
+/dice — Roll a standard 6-sided die
+/dice <sides> — Roll a custom die (e.g. /dice 20)
+/coin — Flip a coin (heads/tails)
+/random <min> <max> — Random number in range
+/poll <question> | <opt1> | <opt2> | ... — Create a poll
 
-*━━━ GROUP TOOLS ━━━*
-/groupstats — Group statistics
-/userinfo [@user] — User information
-/poll <question> | <opt1> | <opt2> — Create poll
-/pin <message> — Pin a message (admin)
+Examples:
+/dice 20
+/random 1 100
+/poll Best anime? | TEIS | AOT | Demon Slayer`,
 
-*━━━ MASTER ONLY ━━━*
-/adduser <user_id> [name] — Add authorized user
-/removeuser <user_id> — Remove user
-/listusers — List authorized users
-/broadcast <msg> — (coming soon)`;
+  tasks: `✅ *TODOS, NOTES & REMINDERS*
+
+*To-do List:*
+/todo add <task> — Add a task
+/todo list — View all tasks
+/todo done <number> — Mark task as complete
+/todo clear — Clear all tasks
+
+*Notes:*
+/note add <text> — Save a note
+/note list — View all notes
+/note del <number> — Delete a note
+
+*Reminders:*
+/remind <time> <message> — Set a reminder
+/reminders — View all pending reminders
+
+Time formats:
+/remind 30m Take a break
+/remind 2h Meeting starts
+/remind at 9pm Study session
+/remind at 15:30 Call mom
+/remind tomorrow at 8am Wake up`,
+
+  teis: `⚔️ *TEIS / SHADOW GARDEN FEATURES*
+
+/shadow — Random Shadow monologue from the void
+/chunni — Dramatic chunni-byo dialogue drop
+/oath — Recite the Shadow Garden oath
+/atomic — *I AM ATOMIC!* (the ultimate declaration)
+/sevenshades — Info about the Seven Shades (Alpha–Eta)
+/quote — Shadow-style inspirational quote
+
+*Group Triggers (no command needed):*
+• Say "I am Atomic" — Shadow responds dramatically
+• Say "Seven Shades" — Shadow acknowledges the elite
+• "Good morning" / "Good night" — Shadow greets you
+• "Shadow Garden" — The organization responds
+• Mention "Ayano" or "Tsukikage" — Ayano awakens
+• Say "Shadow" — Shadow stirs from the darkness
+
+_These triggers work in groups when the bot is a member._`,
+
+  group: `👥 *GROUP CHAT TOOLS*
+
+/groupstats — Show group message statistics
+/userinfo — Your own user info
+/userinfo @username — Another user's info
+/poll <q> | <opt1> | <opt2> — Create anonymous poll
+/pin <message> — Pin a message (requires admin)
+
+*Auto-responses in groups:*
+• Bot only replies when @mentioned, replied to, or triggered
+• Triggers: Atomic, Seven Shades, gm/gn, Shadow Garden, Ayano, Tsukikage
+• New member welcome messages
+• Farewell when someone leaves`,
+
+  master: `👑 *MASTER-ONLY COMMANDS*
+_These commands are restricted to Master Shadow (Piyush) only._
+
+/adduser <telegram_id> [nickname] — Authorize a new Shadow Garden member
+/removeuser <telegram_id> — Revoke a member's access
+/listusers — List all authorized members
+/broadcast <message> — Send a message to all authorized members
+
+Examples:
+/adduser 123456789 Beta
+/removeuser 123456789
+/broadcast Shadow Garden meeting tonight at 9PM IST`,
+};
+
+const HELP_TEXT = HELP_SECTIONS.main;
 
 // ─────────────────────────────────────────
 // BOT COMMAND HANDLERS
@@ -274,9 +380,11 @@ export function initBot() {
   });
 
   // ── /help ──────────────────────────────
-  bot.onText(/^\/help/, async (msg) => {
+  bot.onText(/^\/help ?(.*)/, async (msg, match) => {
     if (!await requireAuth(msg)) return;
-    await bot.sendMessage(msg.chat.id, HELP_TEXT, { parse_mode: "Markdown" });
+    const category = match![1]?.trim().toLowerCase() || "main";
+    const text = HELP_SECTIONS[category] ?? HELP_SECTIONS.main;
+    await bot.sendMessage(msg.chat.id, text, { parse_mode: "Markdown" });
   });
 
   // ── /chat ──────────────────────────────
@@ -893,6 +1001,38 @@ export function initBot() {
     await reply(msg.chat.id, `👥 *Shadow Garden Members:*\n\n${list}`);
   });
 
+  // ── /broadcast ────────────────────────
+  bot.onText(/^\/broadcast (.+)/s, async (msg, match) => {
+    if (!isMaster(msg.from?.id ?? 0)) {
+      await reply(msg.chat.id, "_Only the Master may broadcast to Shadow Garden._");
+      return;
+    }
+    const message = match![1].trim();
+    const users = await db.select().from(authorizedUsersTable).where(eq(authorizedUsersTable.isActive, true));
+    if (users.length === 0) {
+      await reply(msg.chat.id, "_No authorized members to broadcast to._");
+      return;
+    }
+    let sent = 0;
+    let failed = 0;
+    await reply(msg.chat.id, `📡 _Broadcasting to ${users.length} Shadow Garden members…_`);
+    for (const user of users) {
+      try {
+        await bot.sendMessage(
+          user.telegramId,
+          `📡 *Broadcast from Master Shadow:*\n\n${message}`,
+          { parse_mode: "Markdown" }
+        );
+        sent++;
+      } catch {
+        failed++;
+      }
+    }
+    await reply(msg.chat.id,
+      `✅ *Broadcast complete.*\n_Delivered: ${sent} | Failed: ${failed}_`
+    );
+  });
+
   // ── DOCUMENT / PDF HANDLER ─────────────
   bot.on("document", async (msg) => {
     if (!await requireAuth(msg)) return;
@@ -1001,8 +1141,21 @@ export function initBot() {
       }
     }
 
+    // ── Ayano / Tsukikage name trigger ──
+    if (mentionsBotName(text)) {
+      const auth = await isAuthorized(userId);
+      if (auth || isMaster(userId)) {
+        await reply(chatId, getAyanoResponse());
+        return;
+      }
+    }
+
     const isGroup = msg.chat.type === "group" || msg.chat.type === "supergroup";
-    const botMentioned = text.includes(`@${botUsername}`) || text.toLowerCase().includes("shadow");
+    const lowerText = text.toLowerCase();
+    const botMentioned = text.includes(`@${botUsername}`)
+      || lowerText.includes("shadow")
+      || lowerText.includes("ayano")
+      || lowerText.includes("tsukikage");
 
     if (isGroup) {
       // Check group triggers
