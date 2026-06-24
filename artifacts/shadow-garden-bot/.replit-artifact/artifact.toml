@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Shadow Garden Bot"
+version = "1.0.0"
+id = "artifacts/shadow-garden-bot"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19229
+
+[services.development]
+run = "pnpm --filter @workspace/shadow-garden-bot run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/shadow-garden-bot", "run", "build" ]
+publicDir = "artifacts/shadow-garden-bot/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19229"
+BASE_PATH = "/"

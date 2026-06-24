@@ -3,20 +3,25 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Shadow Garden Bot API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: bot
+    description: Bot management
+  - name: users
+    description: Authorized users
+  - name: messages
+    description: Message history
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +29,209 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /bot/status:
+    get:
+      operationId: getBotStatus
+      tags: [bot]
+      summary: Get bot status and stats
+      responses:
+        "200":
+          description: Bot status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BotStatus"
+
+  /bot/users:
+    get:
+      operationId: getAuthorizedUsers
+      tags: [users]
+      summary: Get all authorized users
+      responses:
+        "200":
+          description: List of authorized users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuthorizedUser"
+    post:
+      operationId: addAuthorizedUser
+      tags: [users]
+      summary: Add an authorized user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthorizedUserInput"
+      responses:
+        "201":
+          description: User added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthorizedUser"
+
+  /bot/users/{id}:
+    delete:
+      operationId: removeAuthorizedUser
+      tags: [users]
+      summary: Remove an authorized user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: User removed
+
+  /bot/messages:
+    get:
+      operationId: getRecentMessages
+      tags: [messages]
+      summary: Get recent bot messages
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Recent messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BotMessage"
+
+  /bot/stats:
+    get:
+      operationId: getBotStats
+      tags: [bot]
+      summary: Get bot usage statistics
+      responses:
+        "200":
+          description: Bot statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BotStats"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    BotStatus:
+      type: object
+      required: [online, botName, masterName, authorizedCount, totalMessages]
+      properties:
+        online:
+          type: boolean
+        botName:
+          type: string
+        masterName:
+          type: string
+        authorizedCount:
+          type: integer
+        totalMessages:
+          type: integer
+        uptime:
+          type: number
+
+    AuthorizedUser:
+      type: object
+      required: [id, telegramId, addedBy, addedAt, isActive]
+      properties:
+        id:
+          type: integer
+        telegramId:
+          type: integer
+        username:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        nickname:
+          type: ["string", "null"]
+        addedBy:
+          type: integer
+        addedAt:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+
+    AuthorizedUserInput:
+      type: object
+      required: [telegramId, addedBy]
+      properties:
+        telegramId:
+          type: integer
+        username:
+          type: string
+        firstName:
+          type: string
+        nickname:
+          type: string
+        addedBy:
+          type: integer
+        isActive:
+          type: boolean
+
+    BotMessage:
+      type: object
+      required: [id, chatId, messageType, timestamp, isFromBot]
+      properties:
+        id:
+          type: integer
+        chatId:
+          type: integer
+        chatTitle:
+          type: ["string", "null"]
+        userId:
+          type: ["integer", "null"]
+        username:
+          type: ["string", "null"]
+        messageText:
+          type: ["string", "null"]
+        messageType:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        isFromBot:
+          type: boolean
+
+    BotStats:
+      type: object
+      required: [totalMessages, totalUsers, totalChats, messagesPerDay, topFeatures]
+      properties:
+        totalMessages:
+          type: integer
+        totalUsers:
+          type: integer
+        totalChats:
+          type: integer
+        messagesPerDay:
+          type: integer
+        topFeatures:
+          type: array
+          items:
+            type: object
+            required: [name, count]
+            properties:
+              name:
+                type: string
+              count:
+                type: integer
