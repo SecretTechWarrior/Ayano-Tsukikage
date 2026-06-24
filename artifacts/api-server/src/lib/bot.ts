@@ -1,5 +1,5 @@
 import axios from "axios";
-import TelegramBot from "node-telegram-bot-api";
+import TelegramBot, { type Message, type SendMessageParams } from "node-telegram-bot-api";
 import { db } from "@workspace/db";
 import {
   authorizedUsersTable, chatMemoryTable, todosTable,
@@ -34,7 +34,7 @@ async function isAuthorized(userId: number): Promise<boolean> {
   return !!user;
 }
 
-async function requireAuth(msg: TelegramBot.Message): Promise<boolean> {
+async function requireAuth(msg: Message): Promise<boolean> {
   const userId = msg.from?.id;
   if (!userId) return false;
   if (await isAuthorized(userId)) return true;
@@ -48,7 +48,7 @@ async function requireAuth(msg: TelegramBot.Message): Promise<boolean> {
 // ─────────────────────────────────────────
 // LOG MESSAGES
 // ─────────────────────────────────────────
-async function logMessage(msg: TelegramBot.Message, isFromBot = false): Promise<void> {
+async function logMessage(msg: Message, isFromBot = false): Promise<void> {
   try {
     await db.insert(botMessagesTable).values({
       chatId: msg.chat.id,
@@ -99,7 +99,7 @@ async function clearMemory(chatId: number, userId: number) {
 // ─────────────────────────────────────────
 // SEND HELPERS
 // ─────────────────────────────────────────
-async function reply(chatId: number, text: string, opts?: TelegramBot.SendMessageOptions) {
+async function reply(chatId: number, text: string, opts?: Omit<SendMessageParams, "chat_id" | "text">) {
   try {
     await bot.sendMessage(chatId, text, { parse_mode: "Markdown", ...opts });
   } catch (err) {
@@ -798,7 +798,7 @@ export function initBot() {
     if (!await requireAuth(msg)) return;
     const parts = match![1].split("|").map((s) => s.trim());
     if (parts.length < 3) { await reply(msg.chat.id, "Format: /poll Question | Option1 | Option2 | ..."); return; }
-    await bot.sendPoll(msg.chat.id, parts[0], parts.slice(1), { is_anonymous: false });
+    await bot.sendPoll(msg.chat.id, parts[0], parts.slice(1).map(t => ({ text: t })), { is_anonymous: false });
   });
 
   // ── PDF COMMANDS ──────────────────────

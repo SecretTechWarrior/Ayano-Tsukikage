@@ -187,7 +187,7 @@ export function hashText(text: string): string {
 // UNIT & CURRENCY CONVERSION
 // ─────────────────────────────────────────
 export function convertUnit(value: number, from: string, to: string): string {
-  const conversions: Record<string, Record<string, number>> = {
+  const conversions: Record<string, Record<string, number | ((v: number) => number)>> = {
     km: { mi: 0.621371, m: 1000, cm: 100000, ft: 3280.84, inch: 39370.1 },
     mi: { km: 1.60934, m: 1609.34, cm: 160934, ft: 5280, inch: 63360 },
     m: { km: 0.001, mi: 0.000621371, cm: 100, ft: 3.28084, inch: 39.3701 },
