@@ -346,7 +346,14 @@ const HELP_TEXT = HELP_SECTIONS.main;
 // BOT COMMAND HANDLERS
 // ─────────────────────────────────────────
 export function initBot() {
-  bot = new TelegramBot(token!, { polling: true });
+  const pollingEnabled = process.env.BOT_POLLING_ENABLED !== "false";
+
+  bot = new TelegramBot(token!, { polling: pollingEnabled });
+
+  if (!pollingEnabled) {
+    logger.info("Bot polling DISABLED (BOT_POLLING_ENABLED=false) — Railway instance is primary");
+    return;
+  }
 
   bot.getMe().then((me) => {
     botUsername = me.username ?? "ShadowBot";
