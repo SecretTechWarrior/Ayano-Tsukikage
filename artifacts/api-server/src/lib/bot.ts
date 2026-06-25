@@ -104,6 +104,7 @@ async function reply(chatId: number, text: string, opts?: Omit<SendMessageParams
     await bot.sendMessage(chatId, text, { parse_mode: "Markdown", ...opts });
   } catch (err) {
     logger.warn({ err }, "Failed to send message");
+    trackError("sendMessage", err);
   }
 }
 
@@ -341,6 +342,19 @@ Examples:
 };
 
 const HELP_TEXT = HELP_SECTIONS.main;
+
+// ─────────────────────────────────────────
+// DEV ERROR LOG (in-memory ring buffer)
+// ─────────────────────────────────────────
+const devErrorLog: Array<{ ts: string; ctx: string; msg: string }> = [];
+function trackError(ctx: string, err: unknown) {
+  devErrorLog.unshift({
+    ts: new Date().toISOString().slice(11, 19),
+    ctx,
+    msg: err instanceof Error ? err.message.slice(0, 150) : String(err).slice(0, 150),
+  });
+  if (devErrorLog.length > 30) devErrorLog.pop();
+}
 
 // ─────────────────────────────────────────
 // BOT COMMAND HANDLERS
@@ -1038,6 +1052,156 @@ export function initBot() {
     await reply(msg.chat.id,
       `✅ *Broadcast complete.*\n_Delivered: ${sent} | Failed: ${failed}_`
     );
+  });
+
+  // ═══════════════════════════════════════
+  // MASTER DEV COMMANDS (Piyush only)
+  // ═══════════════════════════════════════
+
+  // ── /ping ─────────────────────────────
+  bot.onText(/^\/ping/, async (msg) => {
+    if (!isMaster(msg.from?.id ?? 0)) return;
+    const start = Date.now();
+    const sent = await bot.sendMessage(msg.chat.id, "🏓 Pong!", { parse_mode: "Markdown" });
+    const latency = Date.now() - start;
+    await bot.editMessageText(
+      `🏓 *Pong!*\n\nLatency: \`${latency}ms\`\nTime: \`${new Date().toISOString().slice(11, 19)} UTC\``,
+      { chat_id: msg.chat.id, message_id: sent.message_id, parse_mode: "Markdown" }
+    );
+  });
+
+  // ── /status ───────────────────────────
+  bot.onText(/^\/status/, async (msg) => {
+    if (!isMaster(msg.from?.id ?? 0)) return;
+    await typing(msg.chat.id);
+    const checks: string[] = [];
+
+    // DB
+    try {
+      await db.select().from(authorizedUsersTable).limit(1);
+      checks.push("✅ Database — connected");
+    } catch (e) { checks.push(`❌ Database — ${e instanceof Error ? e.message.slice(0, 50) : "error"}`); trackError("DB/status", e); }
+
+    // Gemini
+    try {
+      const aiMod = await import("./ai.js");
+      await aiMod.answerQuestion("ping");
+      checks.push("✅ Gemini AI (gemini-2.5-flash) — online");
+    } catch (e) { checks.push(`❌ Gemini AI — ${e instanceof Error ? e.message.slice(0, 50) : "error"}`); trackError("Gemini/status", e); }
+
+    // ElevenLabs
+    try {
+      const key = process.env.ELEVENLABS_API_KEY;
+      if (!key) throw new Error("Key not set");
+      const res = await axios.get("https://api.elevenlabs.io/v1/user", {
+        headers: { "xi-api-key": key }, timeout: 8000,
+      });
+      const charCount = res.data?.subscription?.character_count ?? "?";
+      const charLimit = res.data?.subscription?.character_limit ?? "?";
+      checks.push(`✅ ElevenLabs — online (chars: ${charCount}/${charLimit})`);
+    } catch (e) { checks.push(`❌ ElevenLabs — ${e instanceof Error ? e.message.slice(0, 50) : "error"}`); trackError("ElevenLabs/status", e); }
+
+    // Wikipedia
+    try {
+      await axios.get("https://en.wikipedia.org/api/rest_v1/page/summary/Shadow", { timeout: 5000 });
+      checks.push("✅ Wikipedia API — reachable");
+    } catch (e) { checks.push("❌ Wikipedia API — unreachable"); trackError("Wikipedia/status", e); }
+
+    // Weather (wttr.in)
+    try {
+      await axios.get("https://wttr.in/Tokyo?format=1", { timeout: 5000 });
+      checks.push("✅ Weather API (wttr.in) — reachable");
+    } catch (e) { checks.push("❌ Weather API — unreachable"); trackError("Weather/status", e); }
+
+    // Pollinations
+    try {
+      await axios.head("https://image.pollinations.ai", { timeout: 5000 });
+      checks.push("✅ Pollinations.AI — reachable");
+    } catch (e) { checks.push("❌ Pollinations.AI — unreachable"); trackError("Pollinations/status", e); }
+
+    await reply(msg.chat.id,
+      `🔍 *Shadow Garden — System Status*\n\n${checks.join("\n")}\n\n_Checked at ${new Date().toISOString().slice(11, 19)} UTC_`
+    );
+  });
+
+  // ── /sysinfo ──────────────────────────
+  bot.onText(/^\/sysinfo/, async (msg) => {
+    if (!isMaster(msg.from?.id ?? 0)) return;
+    const uptime = process.uptime();
+    const fmtTime = (s: number) => `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m ${Math.floor(s % 60)}s`;
+    const mem = process.memoryUsage();
+    const toMB = (b: number) => (b / 1024 / 1024).toFixed(1) + " MB";
+    const botUptime = (Date.now() - botStartTime) / 1000;
+    await reply(msg.chat.id,
+      `⚙️ *Shadow Garden — System Info*\n\n` +
+      `🤖 *Bot*\n` +
+      `Username: @${botUsername}\n` +
+      `Uptime: ${fmtTime(botUptime)}\n` +
+      `Polling: ${process.env.BOT_POLLING_ENABLED !== "false" ? "✅ Active" : "❌ Disabled"}\n\n` +
+      `💻 *Process*\n` +
+      `Node: ${process.version}\n` +
+      `Process uptime: ${fmtTime(uptime)}\n` +
+      `Environment: \`${process.env.NODE_ENV ?? "development"}\`\n\n` +
+      `🧠 *Memory*\n` +
+      `Heap used: ${toMB(mem.heapUsed)}\n` +
+      `Heap total: ${toMB(mem.heapTotal)}\n` +
+      `RSS: ${toMB(mem.rss)}\n\n` +
+      `🔑 *API Keys*\n` +
+      `Gemini: ${process.env.GEMINI_API_KEY ? "✅ Set" : "❌ Missing"}\n` +
+      `ElevenLabs: ${process.env.ELEVENLABS_API_KEY ? "✅ Set" : "❌ Missing"}\n` +
+      `Bot Token: ${process.env.TELEGRAM_BOT_TOKEN ? "✅ Set" : "❌ Missing"}`
+    );
+  });
+
+  // ── /logs ─────────────────────────────
+  bot.onText(/^\/logs ?(\d*)/, async (msg, match) => {
+    if (!isMaster(msg.from?.id ?? 0)) return;
+    const n = Math.min(parseInt(match![1] || "10"), 30);
+    if (devErrorLog.length === 0) {
+      await reply(msg.chat.id, "✅ _No errors recorded since last restart. The shadows are quiet._");
+      return;
+    }
+    const entries = devErrorLog.slice(0, n).map((e, i) =>
+      `${i + 1}. \`[${e.ts}]\` *${e.ctx}*\n   ↳ ${e.msg}`
+    ).join("\n\n");
+    await reply(msg.chat.id,
+      `📋 *Last ${Math.min(n, devErrorLog.length)} Errors* (since restart):\n\n${entries}`
+    );
+  });
+
+  // ── /db ───────────────────────────────
+  bot.onText(/^\/db/, async (msg) => {
+    if (!isMaster(msg.from?.id ?? 0)) return;
+    await typing(msg.chat.id);
+    try {
+      const [users, msgs, todos, notes, reminders] = await Promise.all([
+        db.select().from(authorizedUsersTable).where(eq(authorizedUsersTable.isActive, true)),
+        db.select().from(botMessagesTable),
+        db.select().from(todosTable),
+        db.select().from(notesTable),
+        db.select().from(remindersTable).where(eq(remindersTable.sent, false)),
+      ]);
+      const recentMsg = msgs[msgs.length - 1];
+      await reply(msg.chat.id,
+        `🗄️ *Shadow Garden — Database Stats*\n\n` +
+        `👥 Active members: ${users.length}\n` +
+        `💬 Total messages logged: ${msgs.length}\n` +
+        `✅ Active todos: ${todos.length}\n` +
+        `📝 Saved notes: ${notes.length}\n` +
+        `⏰ Pending reminders: ${reminders.length}\n\n` +
+        `_Last message: ${recentMsg ? `"${(recentMsg.messageText ?? "").slice(0, 40)}" by ${recentMsg.username ?? "unknown"}` : "none"}_`
+      );
+    } catch (e) {
+      trackError("DB/stats", e);
+      await reply(msg.chat.id, `❌ DB query failed: ${e instanceof Error ? e.message.slice(0, 100) : "unknown"}`);
+    }
+  });
+
+  // ── /restart ──────────────────────────
+  bot.onText(/^\/restart/, async (msg) => {
+    if (!isMaster(msg.from?.id ?? 0)) return;
+    await reply(msg.chat.id, "🔄 _Fading into the shadows… restarting process._");
+    setTimeout(() => process.exit(0), 1000);
   });
 
   // ── DOCUMENT / PDF HANDLER ─────────────
