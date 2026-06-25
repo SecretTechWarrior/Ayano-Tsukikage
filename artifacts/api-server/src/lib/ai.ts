@@ -14,7 +14,7 @@ export async function chat(
 ): Promise<string> {
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       systemInstruction: SYSTEM_PROMPT + (contextNote ? `\n\nContext: ${contextNote}` : ""),
       generationConfig: { maxOutputTokens: 1024, temperature: 0.85 },
     });
@@ -35,7 +35,7 @@ export async function chat(
 
 export async function summarize(text: string): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(
       `Summarize the following text concisely in 3-5 bullet points:\n\n${text}`
     );
@@ -48,7 +48,7 @@ export async function summarize(text: string): Promise<string> {
 
 export async function translateText(text: string, targetLang: string): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(
       `Translate the following text to ${targetLang}. Return ONLY the translation, nothing else:\n\n${text}`
     );
@@ -61,7 +61,7 @@ export async function translateText(text: string, targetLang: string): Promise<s
 
 export async function correctGrammar(text: string): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(
       `Fix the grammar and spelling of this text. Return ONLY the corrected text:\n\n${text}`
     );
@@ -74,7 +74,7 @@ export async function correctGrammar(text: string): Promise<string> {
 
 export async function generateStory(prompt: string): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(
       `Write a short, engaging story (200-300 words) based on this prompt: ${prompt}`
     );
@@ -87,7 +87,7 @@ export async function generateStory(prompt: string): Promise<string> {
 
 export async function generatePoem(prompt: string): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(
       `Write a beautiful, creative poem about: ${prompt}. Make it 8-16 lines.`
     );
@@ -100,7 +100,7 @@ export async function generatePoem(prompt: string): Promise<string> {
 
 export async function roast(name: string): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(
       `Write a playful, lighthearted, FUNNY roast of someone named ${name}. Keep it fun and not genuinely mean. 2-3 sentences max.`
     );
@@ -113,7 +113,7 @@ export async function roast(name: string): Promise<string> {
 
 export async function compliment(name: string): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(
       `Write a genuine, creative, heartfelt compliment for someone named ${name}. 1-2 sentences.`
     );
@@ -126,7 +126,7 @@ export async function compliment(name: string): Promise<string> {
 
 export async function analyzeImage(base64Image: string, mimeType: string, prompt?: string): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent([
       { inlineData: { data: base64Image, mimeType } },
       prompt ?? "Describe this image in detail.",
@@ -140,7 +140,7 @@ export async function analyzeImage(base64Image: string, mimeType: string, prompt
 
 export async function answerQuestion(question: string): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(
       `Answer this question concisely and accurately: ${question}`
     );

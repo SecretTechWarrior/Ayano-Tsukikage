@@ -442,7 +442,7 @@ export async function textToSpeech(text: string): Promise<Buffer | null> {
     const voiceId = "pNInz6obpgDQGcFmaJgB"; // Adam voice (neutral)
     const res = await axios.post(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
-      { text: text.slice(0, 500), model_id: "eleven_monolingual_v1", voice_settings: { stability: 0.5, similarity_boost: 0.8 } },
+      { text: text.slice(0, 500), model_id: "eleven_turbo_v2_5", voice_settings: { stability: 0.5, similarity_boost: 0.8 } },
       { headers: { "xi-api-key": apiKey, "Content-Type": "application/json", Accept: "audio/mpeg" }, responseType: "arraybuffer" }
     );
     return Buffer.from(res.data);
