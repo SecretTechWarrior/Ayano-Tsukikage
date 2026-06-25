@@ -328,17 +328,26 @@ _These triggers work in groups when the bot is a member._`,
 • Farewell when someone leaves`,
 
   master: `👑 *MASTER-ONLY COMMANDS*
-_These commands are restricted to Master Shadow (Piyush) only._
+_Restricted to Master Shadow (Piyush) only._
 
-/adduser <telegram_id> [nickname] — Authorize a new Shadow Garden member
-/removeuser <telegram_id> — Revoke a member's access
+*Member Management:*
+/adduser <id> [nickname] — Authorize a new member
+/removeuser <id> — Revoke a member's access
 /listusers — List all authorized members
-/broadcast <message> — Send a message to all authorized members
+/broadcast <message> — DM all authorized members
+
+*Dev / Debug Tools:*
+/ping — Bot latency in ms
+/status — Live health check (DB, Gemini, ElevenLabs, APIs)
+/sysinfo — Node version, uptime, RAM, API key status
+/logs [n] — Last N errors since restart (default 10)
+/db — DB stats: messages, users, todos, notes, reminders
+/restart — Cleanly restart the bot process
 
 Examples:
 /adduser 123456789 Beta
-/removeuser 123456789
-/broadcast Shadow Garden meeting tonight at 9PM IST`,
+/broadcast Shadow Garden meeting tonight at 9PM IST
+/logs 20`,
 };
 
 const HELP_TEXT = HELP_SECTIONS.main;
